@@ -1,0 +1,1 @@
+java -cp C:\TestPoint\ZAPtest\lib\*;C:\TestPoint\ZAPtest\bin org.testng.TestNG testng.xml

@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- WARNING: Eclipse auto-generated file.
+              Any modifications will be overwritten.
+              To include a user specific buildfile here, simply create one in the same
+              directory with the processing instruction <?eclipse.ant.import?>
+              as the first entry and export the buildfile again. -->
+<project basedir="." default="build" name="ZAPtest">
+	<!-- This file contains all of the environment specific configuration, change it for your setup -->
+	<property file="local.properties"/>
+	<dirname file="${ant.file}" property="bodgeit.home"/>
+
+	<path id="java.classpath">
+		<fileset dir="root/WEB-INF/lib">
+			<include name="*.jar" />
+		</fileset>
+		<fileset dir="lib">
+			<include name="*.jar" />
+		</fileset>
+		<fileset dir="build/WEB-INF/classes">
+			<include name="*.class" />
+		</fileset>
+		<pathelement location="build/WEB-INF/classes"/>
+	</path>
+
+	<target name="hack">
+		<echo message="file=$(ant.file) home=${ant.home} bodge=${bodgeit.home}"/>
+	</target>
+	<property environment="env"/>
+	<property name="ECLIPSE_HOME" value="../../Users/Reza Mohagheghian/eclipse/jee-neon/eclipse/"/>
+	<property name="debuglevel" value="source,lines,vars"/>
+	<property name="target" value="1.8"/>
+	<property name="source" value="1.8"/>
+	<path id="ZAPtest.classpath">
+		<pathelement location="bin"/>
+		<pathelement location="../ZAP/lib/zap-api-2.4-v10.jar"/>
+		<pathelement location="lib/ant.jar"/>
+		<pathelement location="lib/commons-beanutils-1.8.3.jar"/>
+		<pathelement location="lib/commons-collections-3.2.1.jar"/>
+		<pathelement location="lib/commons-lang-2.6.jar"/>
+		<pathelement location="lib/commons-lang3-3.1.jar"/>
+		<pathelement location="lib/commons-logging-1.1.1.jar"/>
+		<pathelement location="lib/ezmorph-1.0.6.jar"/>
+		<pathelement location="lib/hsqldb.jar"/>
+		<pathelement location="lib/jce.jar"/>
+		<pathelement location="lib/json-lib-2.4-jdk15.jar"/>
+		<pathelement location="lib/rt.jar"/>
+		<pathelement location="lib/selenium-server-standalone-2.43.0.jar"/>
+		<pathelement location="lib/servlet-api.jar"/>
+		<pathelement location="lib/zap-1.4-api-2.jar"/>
+		<pathelement location="lib/zap-api-v2-9.jar"/>
+	</path>
+	<target name="init">
+		<mkdir dir="bin"/>
+		<copy includeemptydirs="false" todir="bin">
+			<fileset dir="src">
+				<exclude name="**/*.launch"/>
+				<exclude name="**/*.java"/>
+			</fileset>
+		</copy>
+	</target>
+	<target name="clean">
+		<delete dir="bin"/>
+	</target>
+	<target depends="clean" name="cleanall"/>
+	<target depends="build-subprojects,build-project,zap-test" name="build"/>
+	<target name="build-subprojects"/>
+	<target depends="init" name="build-project">
+		<echo message="${ant.project.name}: ${ant.file}"/>
+		<javac debug="true" debuglevel="${debuglevel}" destdir="bin" includeantruntime="false" source="${source}" target="${target}">
+			<src path="src"/>
+			<classpath refid="ZAPtest.classpath"/>
+		</javac>
+	</target>
+	<target description="Build all projects which reference this project. Useful to propagate changes." name="build-refprojects"/>
+	<target description="copy Eclipse compiler jars to ant lib directory" name="init-eclipse-compiler">
+		<copy todir="${ant.library.dir}">
+			<fileset dir="${ECLIPSE_HOME}/plugins" includes="org.eclipse.jdt.core_*.jar"/>
+		</copy>
+		<unzip dest="${ant.library.dir}">
+			<patternset includes="jdtCompilerAdapter.jar"/>
+			<fileset dir="${ECLIPSE_HOME}/plugins" includes="org.eclipse.jdt.core_*.jar"/>
+		</unzip>
+	</target>
+	<target description="compile project with Eclipse compiler" name="build-eclipse-compiler">
+		<property name="build.compiler" value="org.eclipse.jdt.core.JDTCompilerAdapter"/>
+		<antcall target="build"/>
+	</target>
+	<target name="ZapJavaClientExample">
+		<java classname="ZapJavaClientExample" failonerror="true" fork="yes">
+			<classpath refid="ZAPtest.classpath"/>
+		</java>
+	</target>
+	<target name="zap-test"
+              			description="Runs the Bodgeit tests through ZAP (which must be running) and then scan for vulnerabilities">
+		<!-- ZAP must be running when you start this test -->
+
+		<antcall target="zap-proxy-tests"/>
+
+		<sleep seconds="5"/>
+
+		<!-- Spider the whole site -->
+		<antcall target="zap-spider"/>
+
+		<sleep seconds="5"/>
+
+		<!-- Active scan the whole site -->
+		<antcall target="zap-ascan"/>
+
+		<sleep seconds="3"/>
+
+		<!-- Save to a timestamped session file -->
+		<antcall target="zap-saveSession"/>
+
+		<!-- Give the passive scanner thread a chance to catch up -->
+		<sleep seconds="5"/>
+
+		<!-- Check the alerts logged -->
+		<antcall target="zap-checkAlerts"/>
+
+		<!--
+              			Note that if the above test fails ZAP will not be stopped, so you will need to call the zap-stop target directly.
+              			-->
+
+		<!-- Stop ZAP -->
+		<antcall target="zap-stop"/>
+
+	</target>
+	<target name="zap-proxy-tests">
+		<!-- Run the standard tests -->
+		<junit printsummary="yes" fork="yes">
+			<sysproperty key="zap.proxy" value="${zap.addr}:${zap.port}"/>
+			<sysproperty key="zap.targetApp" value="${zap.targetApp}"/>
+			<classpath>
+				<fileset dir="root/WEB-INF/lib">
+					<include name="*.jar" />
+				</fileset>
+				<fileset dir="lib">
+					<include name="*.jar" />
+				</fileset>
+				<pathelement location="bin"/>
+			</classpath>
+			<formatter type="plain"/>
+			<formatter type="xml"/>
+			<batchtest fork="yes" todir="build/tests">
+				<fileset dir="src">
+					<include name="**/FunctionalZAP.java"/>
+				</fileset>
+			</batchtest>
+		</junit>
+	</target>
+	<target name="zap-spider">
+		<java classname="org.zaproxy.clientapi.core.ClientApiMain">
+			<arg value="spider"/>
+			<arg value="url=${zap.targetApp}"/>
+			<arg value="zapaddr=${zap.addr}"/>
+			<arg value="zapport=${zap.port}"/>
+			<arg value="debug=true"/>
+
+			<classpath>
+				<fileset dir="lib">
+					<include name="zap-api*.jar" />
+				</fileset>
+			</classpath>
+		</java>
+	</target>
+
+	<target name="zap-ascan">
+		<java classname="org.zaproxy.clientapi.core.ClientApiMain">
+			<arg value="activeScanSubtree"/>
+			<arg value="url=${zap.targetApp}"/>
+			<arg value="zapaddr=${zap.addr}"/>
+			<arg value="zapport=${zap.port}"/>
+			<arg value="debug=true"/>
+
+			<classpath>
+				<fileset dir="lib">
+					<include name="zap-api*.jar" />
+				</fileset>
+			</classpath>
+		</java>
+	</target>
+
+	<target name="zap-saveSession">
+		<tstamp>
+			<format property="timestamp" pattern="yyyy-MM-dd-HH-mm-ss"/>
+		</tstamp>
+		<java classname="org.zaproxy.clientapi.core.ClientApiMain">
+			<arg value="saveSession"/>
+			<arg value="sessionName=${basedir}/bodgeit-${timestamp}"/>
+			<arg value="zapaddr=${zap.addr}"/>
+			<arg value="zapport=${zap.port}"/>
+			<arg value="debug=true"/>
+
+			<classpath>
+				<fileset dir="lib">
+					<include name="zap-api*.jar" />
+				</fileset>
+			</classpath>
+		</java>
+	</target>
+
+	<target name="zap-showAlerts">
+		<java classname="org.zaproxy.clientapi.core.ClientApiMain" failonerror="true">
+			<arg value="showAlerts"/>
+			<arg value="zapaddr=${zap.addr}"/>
+			<arg value="zapport=${zap.port}"/>
+			<arg value="debug=true"/>
+
+			<classpath>
+				<fileset dir="lib">
+					<include name="zap-api*.jar" />
+				</fileset>
+			</classpath>
+		</java>
+	</target>
+
+	<target name="zap-checkAlerts">
+		<!-- alertsFile.xml should fail while allAlertsFile.xml should succeed -->
+		<property name="alertsfile" value="${bodgeit.home}/alertsFile.xml"/>
+
+		<java classname="org.zaproxy.clientapi.core.ClientApiMain" failonerror="true">
+			<arg value="checkAlerts"/>
+			<arg value="alertsFile=${alertsfile}"/>
+			<arg value="zapaddr=${zap.addr}"/>
+			<arg value="zapport=${zap.port}"/>
+			<arg value="debug=true"/>
+
+			<classpath>
+				<fileset dir="lib">
+					<include name="zap-api*.jar" />
+				</fileset>
+			</classpath>
+		</java>
+	</target>
+
+	<target name="zap-stop">
+		<java classname="org.zaproxy.clientapi.core.ClientApiMain">
+			<arg value="stop"/>
+			<arg value="zapaddr=${zap.addr}"/>
+			<arg value="zapport=${zap.port}"/>
+			<arg value="debug=true"/>
+
+			<classpath>
+				<fileset dir="lib">
+					<include name="zap-api*.jar" />
+				</fileset>
+			</classpath>
+		</java>
+	</target>
+</project>

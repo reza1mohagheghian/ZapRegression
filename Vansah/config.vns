@@ -1,0 +1,13 @@
+#[Settings]
+#Thu Oct 06 15:58:18 AEDT 2016
+sMaxLogResponse=120
+sHostAddr=www.host.com
+sVansahConnectionType=1
+sVSAMToken=FLXTPDR1
+sRegScreenShotsDirectory=
+sVansahInstance=testpoint
+sUpdateVansah=1
+sPortNo=0
+sDevMode=1
+sAgentName=SECURITY
+sVQToken=5d820d8d07d654fc9865ca610d14b782
